@@ -1,10 +1,7 @@
 import streamlit as st
 import pandas as pd
 from backend.chatbot_engine import keyword_chatbot
-from backend.meal_planner import calculate_calories, generate_meal_plan
-
-# Load data
-df = pd.read_csv("data/food_dataset.csv")
+from backend.meal_planner import calculate_calories, generate_meal_plan, format_food_info
 
 # Sidebar Navigation
 st.sidebar.title("🍱 Smart AI Nutrition Assistant")
@@ -19,7 +16,7 @@ if page == "🏠 Home":
     - 🥘 Generate personalized meal plans
     - 🤖 Ask questions about food & nutrition
 
-    ---  
+    ---
 
     **Team Members:**
     - Adhikesh R S  
@@ -81,6 +78,6 @@ elif page == "📊 Results":
         st.info(f"🎯 Estimated Daily Calories: **{calories} kcal**")
 
         meal_df = generate_meal_plan(calories, u['diet_type'])
-
+        formatted_df = format_food_info(meal_df)
         st.subheader("🥘 Suggested Meal Plan")
-        st.dataframe(meal_df[["Name", "Calories", "Protein", "Carbs", "Fat"]])
+        st.dataframe(formatted_df)
