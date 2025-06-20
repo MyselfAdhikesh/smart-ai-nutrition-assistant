@@ -1,13 +1,13 @@
 import pandas as pd
+from backend.diet_templates import diet_templates
 
-# Load the food dataset (adjust path as needed)
+# Load food data
 df = pd.read_csv("data/food_dataset.csv")
 
-# --------------------------
-# 1. Calorie Calculation
-# --------------------------
+# -------------------------------
+# Calorie Calculator with Goal
+# -------------------------------
 def calculate_calories(age, gender, weight, height, activity_level, goal):
-    # BMR calculation using Mifflin-St Jeor
     if gender.lower() == "male":
         bmr = 10 * weight + 6.25 * height - 5 * age + 5
     else:
@@ -22,46 +22,53 @@ def calculate_calories(age, gender, weight, height, activity_level, goal):
     }
 
     tdee = bmr * activity_factors.get(activity_level, 1.2)
+    calorie_adjust = diet_templates.get(goal, {}).get("calorie_adjustment", 0)
 
-    if goal == "Lose":
-        tdee -= 500
-    elif goal == "Gain":
-        tdee += 300
+    return round(tdee + calorie_adjust)
 
-    return round(tdee)
+# -------------------------------
+# Macro-Based Meal Plan
+# -------------------------------
+def generate_meal_plan(target_calories, goal="Balanced", diet_type="Normal"):
+    macro_split = diet_templates.get(goal, diet_templates["Balanced"])["macro_split"]
 
-# --------------------------
-# 2. Meal Plan Generator
-# --------------------------
-def generate_meal_plan(target_calories, diet_type="Normal"):
-    # Filter based on diet type (if available in dataset)
+    # Target grams of each macro (based on kcal/g: 4 for carbs & protein, 9 for fat)
+    target_carbs = (macro_split["carbs"] / 100) * target_calories / 4
+    target_protein = (macro_split["protein"] / 100) * target_calories / 4
+    target_fat = (macro_split["fat"] / 100) * target_calories / 9
+
     filtered_df = df.copy()
+
+    # Optional: filter by diet type
     if "Type" in df.columns and diet_type.lower() != "normal":
         filtered_df = filtered_df[filtered_df["Type"].str.lower() == diet_type.lower()]
 
-    # Select foods that add up to the target_calories
-    meal_items = []
-    total = 0
+    selected = []
+    total_cals = total_protein = total_carbs = total_fat = 0
 
-    for _, row in filtered_df.iterrows():
-        if total + row["Calories"] <= target_calories:
-            meal_items.append(row)
-            total += row["Calories"]
-        if total >= target_calories:
+    for _, row in filtered_df.sample(frac=1).iterrows():  # randomize
+        if total_cals + row["Calories"] > target_calories:
+            continue
+
+        selected.append(row)
+        total_cals += row["Calories"]
+        total_protein += row["Protein"]
+        total_carbs += row["Carbs"]
+        total_fat += row["Fat"]
+
+        if total_cals >= target_calories * 0.95:
             break
 
-    return pd.DataFrame(meal_items)
+    return pd.DataFrame(selected)
 
-# --------------------------
-# 3. Show Food Info (optional UI helper)
-# --------------------------
+# -------------------------------
+# Format Food Display
+# -------------------------------
 def format_food_info(df_meals):
-    df_meals = df_meals[["Name", "Calories", "Protein", "Carbs", "Fat"]]
-    df_meals = df_meals.rename(columns={
+    return df_meals[["Name", "Calories", "Protein", "Carbs", "Fat"]].rename(columns={
         "Name": "Food Item",
         "Calories": "kcal",
         "Protein": "Protein (g)",
         "Carbs": "Carbs (g)",
         "Fat": "Fat (g)"
     })
-    return df_meals
