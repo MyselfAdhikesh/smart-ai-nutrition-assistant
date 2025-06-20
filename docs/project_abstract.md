@@ -1,0 +1,1 @@
+Smart AI Nutrition Assistant is a personalized health & meal planning tool using AI. It calculates daily calorie needs, suggests meal plans, and answers nutrition questions.
